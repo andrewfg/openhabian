@@ -77,10 +77,13 @@ OLDWD="$(pwd)"
 cd /opt || exit 1
 
 CONFIGTXT=/boot/config.txt
-if is_bookworm; then
+CMDLINETXT=/boot/cmdline.txt
+if is_trixie || is_bookworm; then
   CONFIGTXT=/boot/firmware/config.txt
+  CMDLINETXT=/boot/firmware/cmdline.txt
 fi
 export CONFIGTXT
+export CMDLINETXT
 
 # update openhabian.conf to have latest set of parameters
 update_openhabian_conf
@@ -107,7 +110,7 @@ if [[ -n "$UNATTENDED" ]]; then
   misc_system_settings
   add_admin_ssh_key
   firemotd_setup
-  java_install "${java_opt:-Temurin21}"
+  java_install "${java_opt:-21}"
   openhab_setup "release" "${openhabpkgversion}"
   import_openhab_config
   openhab_shell_interfaces && setup_tailscale
@@ -122,6 +125,7 @@ if [[ -n "$UNATTENDED" ]]; then
   exim_setup
   nut_setup
   install_grott "install"
+  deconz_setup "${deconz_port}" "${deconz_wsport}"
   permissions_corrections
   setup_mirror_SD "install"
   install_cleanup

@@ -86,8 +86,8 @@ openhab_setup() {
       fi
     elif [[ $openhabMajorVersion = 5 ]]; then
       if [[ $javaVersion -lt 21 ]] ; then
-        update_config_java "Temurin21"
-        java_install "Temurin21"
+        update_config_java "21"
+        java_install "21"
       fi
     fi
 
@@ -231,7 +231,11 @@ openhab_misc() {
   if has_lowmem; then
     if cond_redirect sed -i -e 's|^EXTRA_JAVA_OPTS=.*$|EXTRA_JAVA_OPTS="-Xms16m -Xmx256m -Xss1024k -XX:-TieredCompilation -XX:TieredStopAtLevel=1 -XX:+ExitOnOutOfMemoryError -Dxtext.qn.interning=true"|g' /etc/default/openhab; then echo "OK"; else echo "FAILED"; return 1; fi
   elif has_highmem; then
-    if cond_redirect sed -i -e 's|^EXTRA_JAVA_OPTS=.*$|EXTRA_JAVA_OPTS="-Xms192m -Xmx768m -XX:-TieredCompilation -XX:TieredStopAtLevel=1 -XX:+ExitOnOutOfMemoryError -Dxtext.qn.interning=true"|g' /etc/default/openhab; then echo "OK"; else echo "FAILED"; return 1; fi
+    if has_veryhighmem; then
+      if cond_redirect sed -i -e 's|^EXTRA_JAVA_OPTS=.*$|EXTRA_JAVA_OPTS="-XX:-TieredCompilation -XX:TieredStopAtLevel=1 -XX:+ExitOnOutOfMemoryError -Dxtext.qn.interning=true"|g' /etc/default/openhab; then echo "OK"; else echo "FAILED"; return 1; fi
+    else
+      if cond_redirect sed -i -e 's|^EXTRA_JAVA_OPTS=.*$|EXTRA_JAVA_OPTS="-Xms192m -Xmx768m -XX:-TieredCompilation -XX:TieredStopAtLevel=1 -XX:+ExitOnOutOfMemoryError -Dxtext.qn.interning=true"|g' /etc/default/openhab; then echo "OK"; else echo "FAILED"; return 1; fi
+    fi
   else
     if cond_redirect sed -i -e 's|^EXTRA_JAVA_OPTS=.*$|EXTRA_JAVA_OPTS="-Xms192m -Xmx384m -XX:-TieredCompilation -XX:TieredStopAtLevel=1 -XX:+ExitOnOutOfMemoryError -Dxtext.qn.interning=true"|g' /etc/default/openhab; then echo "OK"; else echo "FAILED"; return 1; fi
   fi

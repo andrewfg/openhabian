@@ -38,7 +38,7 @@ show_main_menu() {
   "" "" \
   "01 | Select Branch"           "Select the openHABian config tool version (\"branch\") to run" \
   "02 | Upgrade System"          "Update all OS software packages (but not openHAB) to latest versions" \
-  "03 | Install openHAB"         "Install or upgrade to latest openHAB" \
+  "03 | Install openHAB"         "Install or upgrade to latest openHAB (including Java)" \
   "04 | Import config"           "Import an openHAB configuration from file or URL" \
   "" "" \
   "10 | Apply Improvements"      "Apply the latest improvements to the basic openHABian setup ►" \
@@ -131,8 +131,8 @@ show_main_menu() {
     "2D | Install EVCC"           "Deploy Electric Vehicle Charge Controller" \
     "   | Remove EVCC"            "Uninstall EVCC" \
     "   | Setup EVCC"             "Setup EVCC from command line (German only)" \
-    "2E | Install ESPHome dashboard"           "Deploy ESPHome dashboard" \
-    "   | Remove ESPHome dashboard"            "Uninstall ESPHome dashboard" \
+    "2E | Install ESPHome "       "Deploy / Update ESPHome Device Builder" \
+    "   | Remove ESPHome "        "Uninstall ESPHome Device Builder" \
     "2F | Install Grott"          "Install Grott Proxy server (for Growatt binding)" \
     "   | Remove Grott"           "Uninstall Grott Proxy server (for Growatt binding)" \
     3>&1 1>&2 2>&3)
@@ -160,8 +160,8 @@ show_main_menu() {
       2D\ *) install_evcc "install";;
       *Remove\ EVCC*) install_evcc "remove";;
       *Setup\ EVCC*) setup_evcc;;
-      2E\ *) install_esphomedashboard "install";;
-      *Remove\ ESPHome\ dashboard*) install_esphomedashboard "remove";;
+      2E\ *) setup_esphome_device_builder "install";;
+      *Remove\ ESPHome*) setup_esphome_device_builder "remove";;
       2F\ *) install_grott "install";;
       *Remove\ Grott*) install_grott "remove";;
       "") return 0 ;;
@@ -222,9 +222,9 @@ show_main_menu() {
     "43 | Clean cache"                    "Clean the cache for openHAB" \
     "44 | Nginx Proxy"                    "Setup reverse and forward web proxy" \
     "45 | OpenJDK 17"                     "Setup OpenJDK 17 as Java provider (default for OH v4 and older)" \
-    "   | OpenJDK 21"                     "Setup OpenJDK 21 as Java provider (DO NOT USE WILL BREAK SYSTEM)" \
+    "   | OpenJDK 21"                     "Setup OpenJDK 21 as Java provider (default)" \
     "   | Temurin 17"                     "Setup Temurin 17 as Java provider (fallback for OH v4 and older)" \
-    "   | Temurin 21"                     "Setup Temurin 21 as Java provider (default)" \
+    "   | Temurin 21"                     "Setup Temurin 21 as Java provider (fallback for OH v5)" \
     "   | OpenJDK 11"                     "Setup OpenJDK 11 as Java provider (legacy)" \
     "46 | Install openhab-js"             "JS Scripting: Upgrade to latest version of JavaScript library (advanced)" \
     "   | Uninstall openhab-js"           "JS Scripting: Switch back to included version of JavaScript library" \

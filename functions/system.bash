@@ -18,8 +18,8 @@ whiptail_check() {
 ##    system_upgrade()
 ##
 system_upgrade() {
-  local upgradeText="ATTENTION !\\n\\nYou chose upgrade ALL of your software packages in one go.\\nNote this will include upgrading openHAB itself to its latest version which might be a major upgrade and can break your working system.\\n\\n Are you sure this is what you want?\\n"
-  local OH4upgradeText="ATTENTION !\\n\\nYou chose to upgrade ALL of your software packages\\nThis is not possible when you are not on the current major version of openHAB, OH4, or the version under development, OH5.\\n\\nIn order to upgrade to openHAB 4 first, use the next menu option."
+  local upgradeText="ATTENTION !\\n\\nYou chose upgrade ALL of your operating system software packages in one go.\\nNote this will be a major upgrade and can break your working system.\\n\\n Are you sure this is what you want?\\n"
+  local OH4upgradeText="ATTENTION !\\n\\nYou chose to upgrade ALL of your software packages\\nThis is not possible when you are not on one of the current major version of openHAB, OH4 or OH5.\\n\\nIn order to upgrade to openHAB 4 first, use the next menu option 03."
 
   echo "$(timestamp) [openHABian] Updating repositories and upgrading installed packages..."
   if [[ -n "$INTERACTIVE" ]]; then
@@ -34,9 +34,9 @@ system_upgrade() {
   export DEBIAN_FRONTEND=noninteractive
   if ! apt-get clean --yes -o DPkg::Lock::Timeout="$APTTIMEOUT"; then echo "FAILED"; return 1; fi
   # bad packages may require interactive input despite of this setting so do not mask output (no cond_redirect)
-  if ! apt-get upgrade --yes -o DPkg::Lock::Timeout="$APTTIMEOUT" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"; then echo "FAILED"; return 1; fi
+  if ! apt-get upgrade --yes --allow-downgrades -o DPkg::Lock::Timeout="$APTTIMEOUT" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"; then echo "FAILED"; return 1; fi
   if ! cond_redirect java -version &> /dev/null; then
-    update_config_java "Temurin21" && java_install "Temurin21"
+    update_config_java "21" && java_install "21"
   fi
   unset DEBIAN_FRONTEND
 }
@@ -49,8 +49,10 @@ basic_packages() {
   echo -n "$(timestamp) [openHABian] Installing basic can't-be-wrong packages (screen, vim, ...)... "
   dpkg --configure -a --force-confnew  # just in case to ensure apt works
 
-  if cond_redirect apt-get -o DPkg::Lock::Timeout="$APTTIMEOUT" install --yes acl arping apt-utils bash-completion bzip2 coreutils \
-    curl dirmngr git htop man-db mc multitail nano nmap lsb-release screen software-properties-common \
+  # removed pkg software-properties-common
+  if cond_redirect apt-get -o DPkg::Lock::Timeout="$APTTIMEOUT" install --yes \
+    acl arping apt-utils bash-completion bzip2 coreutils \
+    curl dirmngr git htop man-db mc multitail nano nmap lsb-release screen \
     telnet usbutils util-linux vfu vim wget whiptail xz-utils zip; \
   then echo "OK"; else echo "FAILED"; exit 1; fi
 }
@@ -66,18 +68,15 @@ needed_packages() {
   # Install python3/python3-pip/python3-wheel/python3-setuptools - for python packages
   echo -n "$(timestamp) [openHABian] Installing additional needed packages... "
   if cond_redirect apt-get -o DPkg::Lock::Timeout="$APTTIMEOUT" install --yes apt-transport-https avahi-daemon bc jq mbpoll \
-    moreutils python3 python3-pip python3-wheel python3-setuptools sysstat \
-    fontconfig; \
-  then echo "OK"; else echo "FAILED"; return 1; fi
+    moreutils python3 python3-pip python3-wheel python3-setuptools sysstat fontconfig; then echo "OK"; else echo "FAILED"; return 1; fi
   if is_pi_wlan && [[ -z $PREOFFLINE ]]; then
     echo -n "$(timestamp) [openHABian] Installing python3 serial package... "
-    if cond_redirect apt-get install --yes -o DPkg::Lock::Timeout="$APTTIMEOUT" python3-smbus python3-serial; then echo "OK"; else echo "FAILED"; return 1; fi
+    if cond_redirect apt-get install --yes -o DPkg::Lock::Timeout="$APTTIMEOUT" python3-smbus python3-serial; then echo "OK"; else echo "FAILED"; fi
     echo -n "$(timestamp) [openHABian] Installing pigpio package... "
-    if cond_redirect apt-get install --yes -o DPkg::Lock::Timeout="$APTTIMEOUT" pigpio; then echo "OK"; else echo "FAILED"; return 1; fi
+    if cond_redirect apt-get install --yes -o DPkg::Lock::Timeout="$APTTIMEOUT" rgpiod; then echo "OK"; else echo "FAILED"; fi
     echo -n "$(timestamp) [openHABian] Installing additional bluetooth packages... "
     if cond_redirect apt-get install --yes -o DPkg::Lock::Timeout="$APTTIMEOUT" bluez python3-dev libbluetooth-dev \
-      raspberrypi-sys-mods pi-bluetooth; \
-    then echo "OK"; else echo "FAILED"; return 1; fi
+      raspberrypi-sys-mods pi-bluetooth; then echo "OK"; else echo "FAILED"; fi
   fi
 }
 
@@ -453,9 +452,8 @@ change_swapsize() {
   ((size/=1024))
 
   echo -n "$(timestamp) [openHABian] Adjusting swap size to $size MB... "
-  if ! cond_redirect dphys-swapfile swapoff; then echo "FAILED (swapoff)"; return 1; fi
-  if ! cond_redirect sed -i 's|^#*.*CONF_SWAPSIZE=.*$|CONF_SWAPSIZE='"${size}"'|g' /etc/dphys-swapfile; then echo "FAILED (swapfile)"; return 1; fi
-  if cond_redirect dphys-swapfile swapon; then echo "OK (reboot required)"; else echo "FAILED (swapon)"; return 1; fi
+  # TBD
+  # dphys-swapfile is no longer available in trixie
 }
 
 ## Reduce the RPi GPU memory to the minimum to allow for the system to utilize
@@ -559,19 +557,19 @@ prepare_serial_port() {
     else
       if ! (echo "enable_uart=1" >> "${CONFIGTXT}"); then echo "FAILED (uart)"; return 1; fi
     fi
-    if ! cond_redirect cp /boot/cmdline.txt /boot/cmdline.txt.bak; then echo "FAILED (backup cmdline.txt)"; return 1; fi
-    if ! cond_redirect sed -i -e 's|console=tty.*console=tty1|console=tty1|g' /boot/cmdline.txt; then echo "FAILED (console)"; return 1; fi
-    if ! cond_redirect sed -i -e 's|console=serial.*console=tty1|console=tty1|g' /boot/cmdline.txt; then echo "FAILED (serial)"; return 1; fi
+    if ! cond_redirect cp "${CMDLINETXT}" "${CMDLINETXT}.bak"; then echo "FAILED (backup cmdline.txt)"; return 1; fi 
+    if ! cond_redirect sed -i -e 's|console=tty.*console=tty1|console=tty1|g' "${CMDLINETXT}"; then echo "FAILED (console)"; return 1; fi
+    if ! cond_redirect sed -i -e 's|console=serial.*console=tty1|console=tty1|g' "${CMDLINETXT}"; then echo "FAILED (serial)"; return 1; fi
     cond_echo "Disabling serial-getty service"
     if ! cond_redirect systemctl disable --now serial-getty@ttyAMA0.service; then echo "FAILED (disable serial-getty@ttyAMA0.service)"; return 1; fi
     if ! cond_redirect systemctl disable --now serial-getty@serial0.service; then echo "FAILED (disable serial-getty@serial0.service)"; return 1; fi
     if cond_redirect systemctl disable --now serial-getty@ttyS0.service; then echo "OK (reboot required)"; else echo "FAILED (disable serial-getty@ttyS0.service)"; return 1; fi
   else
-    if [[ -f /boot/cmdline.txt.bak ]]; then
+    if [[ -f "${CMDLINETXT}.bak" ]]; then
       echo -n "$(timestamp) [openHABian] Disabling serial port and enabling serial console... "
       if ! cond_redirect sed -i -e '/^#*.*enable_uart=.*$/d' "${CONFIGTXT}"; then echo "FAILED (uart)"; return 1; fi
-      if ! cond_redirect cp /boot/cmdline.txt.bak /boot/cmdline.txt; then echo "FAILED (restore cmdline.txt)"; return 1; fi
-      if ! cond_redirect rm -f /boot/cmdline.txt.bak; then echo "FAILED (remove backup)"; return 1; fi
+      if ! cond_redirect cp "${CMDLINETXT}.bak" "${CMDLINETXT}"; then echo "FAILED (restore cmdline.txt)"; return 1; fi
+      if ! cond_redirect rm -f "${CMDLINETXT}.bak"; then echo "FAILED (remove backup)"; return 1; fi
       cond_echo "Enabling serial-getty service"
       if ! cond_redirect systemctl enable --now serial-getty@ttyAMA0.service; then echo "FAILED (enable serial-getty@ttyAMA0.service)"; return 1; fi
       if ! cond_redirect systemctl enable --now serial-getty@serial0.service; then echo "FAILED (enable serial-getty@serial0.service)"; return 1; fi

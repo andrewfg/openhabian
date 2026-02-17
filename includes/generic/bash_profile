@@ -1,4 +1,4 @@
-# ~/.bash_profile: executed by bash(1) for interactive shells.
+# shellcheck shell=bash
 
 source /opt/openhabian/functions/helpers.bash
 
@@ -28,16 +28,16 @@ fi
 
 echo
 if [ -f ~/.firemotd-cache ]; then
-  cat ~/.firemotd-cache
+  grep -v Platform ~/.firemotd-cache 
 fi
 (FireMotD --theme Gray > ~/.firemotd-cache &) &>/dev/null      # does not use cache; might get removed in the near future
 
 OHPKG="openhab"
-OHVERSION="$(sed -n 's/openhab-distro\s*: //p' /var/lib/${OHPKG}/etc/version.properties)"
-OHBUILD="$(sed -n 's/build-no\s*: //p' /var/lib/${OHPKG}/etc/version.properties)"
+OHVERSION="$(sed -n 's/openhab-distro\s*: //p' /var/lib/${OHPKG}/etc/version.properties 2>/dev/null)"
+OHBUILD="$(sed -n 's/build-no\s*: //p' /var/lib/${OHPKG}/etc/version.properties 2>/dev/null)"
 
 echo -e "\\n$(sed -e 's|$OHVERSION|'"${OHVERSION}"'|g' -e 's|$OHBUILD|'"${OHBUILD}"'|g' -e 's|${HOSTNAME}|'"${HOSTNAME}"'|g' /opt/openhabian/includes/${OHPKG}logo)\\n"
 
-if [[ -f $HOME/.profile ]]; then source $HOME/.profile; fi
+if [[ -f "$HOME"/.profile ]]; then source "$HOME"/.profile; fi
 
 # vim: filetype=sh
